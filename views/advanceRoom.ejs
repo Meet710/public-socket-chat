@@ -1,0 +1,115 @@
+<!-- index.ejs -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Room</title>
+    <%- include('head') %>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body>
+
+    <div class="app h-screen  flex space-y-2 items-center justify-center p-4 ">
+        <div class="container bg-light lg:w-[50rem] py-4">
+          <form id="login" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="username">Username</label>
+              <input type="text" class="form-control" id="username" placeholder="Enter the usename" name="username" />
+            </div>
+            <div class="form-group">
+              <label for="password">Password</label>
+              <input type="password" class="form-control" id="password" placeholder="Enter the password" name="password" />
+            </div>
+            <div class="form-group">
+                <label for="room">Room </label>
+                <select name="room" id="room" class="form-control md:w-96 lg:w-1/2">
+                    <option value=""></option>
+                    <option value="freechat">freechat</option>
+                    <option value="realtalk">realtalk</option>
+                </select>
+            </div>
+            <p><a class="link-opacity-100-hover" href="/register">Not Register ?  Click here to register.</a></p>
+            <!-- Change type to submit -->
+
+            <button type="button" onclick="userLogin()" class="btn btn-success mt-4" id="Submit">Submit</button>
+          </form>
+        </div>
+      </div>
+
+
+
+
+    <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+
+    <script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+    <script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/validator/13.9.0/validator.js"
+        integrity="sha512-rOMALLrxlgIcEeMdX0O7A+pysTPb/201n7g04dPGvgJFB+f0CKvL8qljuIU/lDfG8IBi3o5R921G2013ihGuWg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.8.7/chosen.jquery.js" integrity="sha512-eSeh0V+8U3qoxFnK3KgBsM69hrMOGMBy3CNxq/T4BArsSQJfKVsKb5joMqIPrNMjRQSTl4xG8oJRpgU2o9I7HQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chosen/1.4.2/chosen.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+    const socketPort = 3001;
+    const socket = io(`localhost:${socketPort}`, {
+      transports: ["websocket", "polling", "flashsocket"],
+    });
+      $('#room').chosen({})
+        function userLogin() {
+            $('#login').validate({
+                ignore: '',
+                rules: {
+                    username: 'required',
+                    password: 'required',
+                    room: "required"
+                },
+                messages: {
+                    username: 'Enter The Username',
+                    password: 'Enter The Password',
+                    room: 'Select Room'
+                },
+                submitHandler: function (form) {
+                    form.submit();
+                },
+                errorPlacement: function (error, element) {
+                    toastr.error(error.text())
+
+                },
+                onfocusout: false,
+                onkeyup: false
+
+            })
+            if ($('#login').valid()) {
+                const form = $('#login').serializeArray()
+                let obj = {}
+                form.forEach(function (key) {
+                    obj[key.name] = key.value
+                })
+                console.log(obj)
+                $.ajax({
+                    type: 'POST',
+                    url: `/login/${obj['room']}`,
+                    data: obj,
+                    success: function (response) {
+                        if (response.redirectUrl) {
+                            socket.emit("joinRoom", response.redirectUrl, response.username);
+                            window.location.replace(response.redirectUrl);
+                        }
+                        console.log(response)
+                    },
+                    error: function (error) {
+                        toastr.error(error.responseJSON.error)
+                    }
+                });
+            }
+
+        }
+
+    </script>
+</body>
+
+</html>

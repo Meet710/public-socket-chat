@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Socket.IO Chat</title>
+  <style>
+    table,
+    th,
+    td {
+      border: 1px solid black;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Socket.IO Chat</h1>
+  <div id="options">
+    <label>
+      <input type="radio" name="chat-type" value="chatroom" /> Chat Room
+    </label>
+    <label>
+      <input type="radio" name="chat-type" value="private" /> Private
+      Conversation
+    </label>
+    <button id="start-chat">Start Chat</button>
+  </div>
+  <div id="chat">
+    <table id="chatTable">
+      <tr>
+        <th id="public">Public</th>
+        <th>Private</th>
+      </tr>
+    </table>
+
+    <input type="text" id="message-input" autocomplete="off" />
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(() => {
+      const chatSocket = io("/chat");
+      const privateSocket = io("/private");
+      let privateMessage = " ";
+      let currentColumn = 0;
+
+      function appendMessage(publicMessage, privateMessage) {
+        currentRow = $('<tr>');
+        currentRow.append(`<td>${publicMessage}</td>`);
+        currentRow.append(`<td>${privateMessage}</td>`);
+
+        // Append the current row to the table body
+        $('#chatTable tbody').append(currentRow);
+
+        // Create a new current row for the next messages
+        
+      }
+
+      chatSocket.on("chat message", (message) => {
+        appendMessage(message, "");
+      });
+
+      privateSocket.on("private message", (message) => {
+        appendMessage("", message);
+      });
+
+      $("#start-chat").click(() => {
+        const selectOption = $('input[name="chat-type"]:checked');
+        const message = $("#message-input").val();
+        console.log(message, "message");
+
+        if (message) {
+          if (selectOption) {
+            const chatType = selectOption.val();
+            console.log(chatType);
+            if (chatType === "chatroom") {
+              chatSocket.emit("chat message", message);
+            }
+            if (chatType === "private") {
+              privateSocket.emit("private message", message);
+            }
+          }
+          $("#message-input").val("");
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>

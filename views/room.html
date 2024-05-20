@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Room example</h1>
+    <input id="username" placeholder="Enter your username" />
+    <div class="container"></div>
+    <button id="freechatRoom">Free chat</button>
+    <button id="sendMessage">Send Message</button>
+    <ul id="messages"></ul>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function() {
+      const socketPort=3001
+      const socket = io(`localhost:${socketPort}`,{transports: ['websocket', 'polling', 'flashsocket']})
+
+      const roomName = "chatRoom";
+      $("body").on("click", "#joinButton", function(event) {
+       const userName = $("#username").val();
+       if (!userName) {
+         alert("Enter userName")
+       }
+       else{
+       socket.emit("joinRoom", roomName, userName);
+       }
+      })
+      function sendMessage() {
+        const msg = $("#message").val()
+        const userName = $("#username").val();
+        socket.emit("sendMessage", roomName, userName, msg);
+      }
+      socket.on("sendMessage", (message) => {
+        const messagesList = $("#messages");
+        const li = document.createElement("li");
+        li.textContent = `${message.userName}: ${message.message}`;
+        messagesList.append(li);
+        console.log(message,"client side")
+      });
+
+      socket.on("joinRoom",(message)=>{
+        alert(messagea)
+      })
+    })
+    </script>
+  </body>
+</html>

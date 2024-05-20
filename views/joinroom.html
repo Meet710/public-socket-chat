@@ -1,0 +1,38 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Join Room</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
+    <link rel="stylesheet" type="text/css" href="app.css">
+    <style>
+        body {
+            margin: 5rem;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui main text container segment container">
+        <div class="ui huge header"> Join Room</div>
+          <form class="ui form" enctype="multipart/form-data" >
+            <div class="field">
+                <label> Username </label>
+                <input type="text" name="username" placeholder="username" required>
+            </div>
+             <a href="/public"><button id="joinbutton" class="ui violet basic button">Join</button></a>
+          </form>
+    </div>
+    
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(()=>{
+    const socket = io()
+   })
+</script> 
+</body>
+</html>

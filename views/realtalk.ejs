@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Free Chat Room</title>
+
+    <%- include('head') %>
+
+        <script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js"></script>
+        <!-- Include Toastr CSS -->
+        <link rel="stylesheet" type="text/css"
+            href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" />
+        <link rel="stylesheet" href="styles.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+
+
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <!-- Content goes here -->
+            <h1 class="room-name">Real talk</h1>
+        </div>
+        <div class="message-box"></div>
+        <form id="freechat" enctype="multipart/form-data">
+            <div class="footer">
+                <input type="hidden" name="username" id="sessionData" value="<%=sessionActive %>">
+                <input type="text" name="chat" class="message-input">
+                <button type="button" class="send-button">Send</button>
+            </div>
+        </form>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            displayAllMessages()
+            const socketPort = 3001;
+            const socket = io(`localhost:${socketPort}`, {
+                transports: ["websocket", "polling", "flashsocket"],
+            });
+
+            // Function to append a message to the message box
+            function appendMessage(message) {
+                console.log(message, "---")
+                $(".message-box").append(`
+        <div class="message">
+          <div class="user-info">
+            <div class="user-name">${message.user.username}</div>
+            <div class="date-time">${message.date}</div>
+          </div>
+          <div class="message-content">${message.chat}</div>
+        </div>
+      `);
+            }
+
+            // Function to fetch and display all messages
+            function displayAllMessages() {
+                const room = 'realtalk';
+                $.ajax({
+                    url: `/allchat/${room}`,
+                    method: "GET",
+                    dataType: 'json',
+                    success: function (data) {
+                        $('.message-box').empty(); // Clear the message box
+                        data.forEach(appendMessage); // Append each message to the message box
+                        $(".message-box").animate({ scrollTop: $('.message-box')[0].scrollHeight }, 2000);
+                    }
+                });
+            }
+
+            socket.on('connect', () => {
+                const usename = $('#sessionData').val()
+                socket.emit("joinRoom", 'realtalk', usename);
+                // Event listener for clicking the send button
+                $('.send-button').on('click', (e) => {
+                    e.preventDefault();
+                    $('#freechat').validate({
+                        rules: {
+                            username: "required",
+                            chat: "required"
+                        },
+                        messages: {
+                            username: "Username not found login again",
+                            chat: "Enter The Chat"
+                        },
+                        submitHandler: function (form) {
+                            form.submit();
+                        },
+                        errorPlacement: function (error, element) {
+                            toastr.error(error.text());
+                        },
+                        onfocusout: false,
+                        onkeyup: false
+                    });
+
+                    if ($('#freechat').valid()) {
+                        const data = $('#freechat').serializeArray().reduce((acc, cur) => {
+                            acc[cur.name] = cur.value;
+                            return acc;
+                        }, {});
+
+                        const currentDateTime = new Date();
+                        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                        const month = months[currentDateTime.getMonth()];
+                        const date = currentDateTime.getDate();
+                        const year = currentDateTime.getFullYear();
+                        const hours = currentDateTime.getHours();
+                        const minutes = currentDateTime.getMinutes().toString().padStart(2, 0);
+                        const formattedDateTime = `${month} ${date}, ${year}, ${hours}:${minutes}`;
+
+                        data.date = formattedDateTime;
+                        data.room = 'realtalk'
+
+                        $.ajax({
+                            url: `/chat`,
+                            method: "POST",
+                            data: data,
+                            dataType: 'json',
+                            success: function (data) {
+                                if (data) {
+                                    $(".message-input").val("")
+                                    // displayAllMessages()
+                                }
+                            },
+                            error: (error) => {
+                                toastr.error(error.responseJSON.error)
+                            }
+
+                        });
+
+                        socket.emit("sendMessage", 'realtalk', data.username, data.chat);
+                    }
+                });
+
+                // Event listener for receiving a message from the server
+                socket.on("sendMessage", (data) => {
+                    console.log("🚀 ~ socket.on ~ data:", data)
+                    const currentDateTime = new Date();
+                    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const month = months[currentDateTime.getMonth()];
+                    const date = currentDateTime.getDate();
+                    const year = currentDateTime.getFullYear();
+                    const hours = currentDateTime.getHours();
+                    const minutes = currentDateTime.getMinutes().toString().padStart(2, 0);
+                    const formattedDateTime = `${month} ${date}, ${year}, ${hours}:${minutes}`
+                    $(".message-box").append(`
+                    <div class="message">
+                    <div class="user-info">
+                    <div class="user-name">${data.userName}</div>
+                    <div class="date-time">${formattedDateTime}</div>
+                    </div>
+                    <div class="message-content">${data.message}</div>
+                    </div>
+                    `);
+
+                    $(".message-box").animate({ scrollTop: $('.message-box')[0].scrollHeight }, 2000);
+                })
+
+            })
+        })
+
+    </script>
+</body>
+
+</html>

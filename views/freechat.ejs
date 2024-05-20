@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Free Chat Room</title>
+
+  <%- include('head') %>
+
+    <script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js"></script>
+    <!-- Include Toastr CSS -->
+    <link rel="stylesheet" type="text/css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" />
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <!-- Content goes here -->
+      <h1 class="room-name">Free Chat Room</h1>
+    </div>
+    <div class="message-box mt-2">
+
+
+    </div>
+    <form id="freechat" enctype="multipart/form-data">
+      <div class="footer mt-2 ">
+        <input type="hidden" name="username" id="sessionData" value="<%=sessionActive %>">
+        <input type="hidden" name="room" id="room" value="freechat">
+        <input type="hidden" id="image" value="<%=image %>">
+        <input type="text" name="chat" class="message-input">
+        <!-- <button type="button" class="send-button">Send</button> -->
+        <input type="file" id="upload" name="upload" accept="image/jpeg, image/png, image/jpg" style="display: none;" />
+        <label for="upload"><i class="fa fa-paperclip" aria-hidden="true"></i><span id="file-name"></span></label>
+        <input type="button" class="send-button" id="send-button" style="display: none" />
+        <label for="send-button" class="ml-2"><i class="fa fa-send" aria-hidden="true"></i></label>
+      </div>
+    </form>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+  <script>
+    $(document).ready(() => {
+      displayAllMessages();
+      smoothScrollToBottom()
+      const socketPort = 3001;
+      const socket = io(`localhost:${socketPort}`, {
+        transports: ["websocket", "polling", "flashsocket"],
+      });
+
+      // Function to append a message to the message box
+      function appendMessage(message) {
+        const { user, date, chat, image } = message;
+        const { username } = user;
+
+        const imageHtml = image ? `<img src="${image}" class="message-image"/>` : '';
+
+
+
+        $(".message-box").append(`
+        <div class="message">
+        <div class="user-info">
+          <div class="user-name">${username}</div>
+          <div class="date-time">${date}</div>
+        </div>
+        <div class="message-content">${chat}</div>
+        ${imageHtml}
+      </div>
+    `);
+      }
+
+      // Update file name display when file is selected
+      $("#upload").change(function () {
+        $("#file-name").text(this.files[0].name);
+      });
+      function smoothScrollToBottom() {
+    $(".message-box").animate({ scrollTop: $('.message-box')[0].scrollHeight }, 500, function() {
+        // This function will be called once the animation is complete
+        smoothScrollToBottom(); // Scroll again after the animation is complete
+    });
+}
+      // Function to fetch and display all messages
+      function displayAllMessages() {
+        const room = 'freechat';
+        $.ajax({
+          url: `/allchat/${room}`,
+          method: "GET",
+          dataType: 'json',
+          success: function (data) {
+            $('.message-box').empty(); // Clear the message box
+            $(".message-image").remove();
+            data.forEach(appendMessage); // Append each message to the message box
+           smoothScrollToBottom()
+
+          }
+        });
+      }
+
+      // Prevent form submission on Enter key press
+      $('form').on('keypress', function (event) {
+        if (event.which === 13) {
+          event.preventDefault();
+        }
+      });
+
+      // Get current date and time
+      const currentDateTime = new Date();
+      const month = currentDateTime.toLocaleString('default', { month: 'short' });
+      const date = currentDateTime.getDate();
+      const year = currentDateTime.getFullYear();
+      const hours = currentDateTime.getHours();
+      const minutes = currentDateTime.getMinutes().toString().padStart(2, '0');
+      const formattedDateTime = `${month} ${date}, ${year}, ${hours}:${minutes}`;
+
+      // Socket event handlers
+      socket.on('connect', () => {
+        const username = $('#sessionData').val();
+        socket.emit("joinRoom", 'freechat', username);
+
+        // Event listener for sending a message
+        $('.send-button').on('click', (e) => {
+          e.preventDefault();
+          $('#freechat').validate({
+            rules: { username: "required", chat: "required" },
+            messages: { username: "Username not found, please login again", chat: "Enter the chat message" },
+            submitHandler: function (form) { form.submit(); },
+            errorPlacement: function (error, element) { toastr.error(error.text()); },
+            onfocusout: false,
+            onkeyup: false
+          });
+
+          if ($('#freechat').valid()) {
+
+            const formData = new FormData($('#freechat')[0]);
+            formData.delete('date');
+            formData.append('date', formattedDateTime);
+            const image = formData.get('upload').name
+            formData.append('image', image);
+            console.log("🚀 ~ $ ~ image:", image)
+            const formDataObject = {};
+
+            for (const [key, value] of formData.entries()) {
+              formDataObject[key] = value;
+            }
+
+
+            console.log("🚀 ~ $ ~ formDataObject:", formDataObject)
+
+            $.ajax({
+              url: '/chat',
+              type: 'POST',
+              data: formData,
+              processData: false,
+              contentType: false,
+              success: function (response) {
+                if (response.image) {
+                  console.log("🚀 ~ $ ~ response:", response.image)
+                }
+              },
+              error: function (error) {
+                toastr.error(error.responseJSON.error);
+              }
+            });
+            $('#file-name').text('')
+            $('.message-input').val('')
+            socketEmit(formDataObject)
+          }
+        });
+
+        function socketEmit(message, file) {
+
+          if (message.upload) {
+            delete message.upload
+          }
+          console.log("🚀 ~ socketEmit ~ message:", message)
+
+          socket.emit('sendMessage', message)
+        }
+        // Event listener for receiving a message from the server
+        socket.on("sendMessage", (data) => {
+          console.log(data)
+
+
+          // Construct the image element
+          const messageElement = $("<div>").addClass("message")
+            .append(
+              $("<div>").addClass("user-info").append(
+                $("<div>").addClass("user-name").text(data.username),
+                $("<div>").addClass("date-time").text(data.date)
+              ),
+              $("<div>").addClass("message-content").text(data.chat)
+            );
+
+          // Construct the image element
+          if (data.image) {
+            // Create the image element
+            const imageElement = $("<img>")
+              .addClass("message-image")
+              .attr("src", data.image)
+              .on("load", function () {
+                messageElement.append($(this));
+                $(".message-box").append(messageElement);
+                
+              });
+          } else {
+            // If there's no image, just append the message element
+            $(".message-box").append(messageElement);
+          }
+          // Scroll to the bottom of the message box
+            smoothScrollToBottom()
+        });
+
+
+      });
+    });
+
+  </script>
+</body>
+
+</html>

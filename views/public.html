@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Public Chat Room</title>
+  <!-- Include Bootstrap CSS -->
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Add custom styles for the chat messages */
+    .chat-card {
+      margin-bottom: 10px;
+    }
+
+    .chat-card .card-body {
+      padding: 10px;
+    }
+
+    .chat-username {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="jumbotron">
+          <h1 class="display-4">Public Chat Room</h1>
+          <button id="logout-button" class="btn btn-danger">Logout</button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <div id="user-account">
+          <h2>Account</h2>
+          <p>Username: <span id="username">JohnDoe</span></p>
+        </div>
+        <div id="search-user">
+          <h2>Search User</h2>
+          <div class="input-group">
+            <input type="text" id="search-input" class="form-control" placeholder="Enter username">
+            <div class="input-group-append">
+              <button id="search-button" class="btn btn-primary">Search</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div id="chat">
+          <h2>Chat</h2>
+          <div id="messages"></div>
+          <div class="input-group">
+            <input id="message-input" class="form-control" autocomplete="off" placeholder="Type your message...">
+            <div class="input-group-append">
+              <button id="send-button" class="btn btn-success">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add the following JavaScript code -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Add your socket.io code here for real-time messaging
+      var socket = io(); // Initialize socket.io
+
+      // Function to display chat messages as cards
+      function displayChatMessage(username, message) {
+        var chatMessages = $('#messages');
+        var chatCard = $('<div>').addClass('card chat-card');
+        var cardBody = $('<div>').addClass('card-body');
+        var usernameElement = $('<p>').addClass('chat-username').text(username + ':');
+        var messageElement = $('<p>').addClass('card-text').text(message);
+
+        cardBody.append(usernameElement, messageElement);
+        chatCard.append(cardBody);
+        chatMessages.append(chatCard);
+
+        // Scroll to the bottom of the chat container to show the latest message
+        chatMessages.scrollTop(chatMessages[0].scrollHeight);
+      }
+
+      // Event handler for sending a message
+      $('#send-button').click(function() {
+        var messageInput = $('#message-input');
+        var message = messageInput.val();
+        messageInput.val(''); // Clear the input field
+        displayChatMessage($('#username').text(), message);
+        // You can also emit the message to the server using socket.io and handle it there
+        // socket.emit('chat message', message);
+      });
+
+      // Sample code for receiving a message (replace with your own logic)
+      // socket.on('chat message', function(msg) {
+      //   displayChatMessage(msg.username, msg.message);
+      // });
+    });
+  </script>
+</body>
+</html>
